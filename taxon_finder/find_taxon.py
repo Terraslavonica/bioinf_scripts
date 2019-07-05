@@ -54,6 +54,11 @@ def check_output_path(res_path):
 
 
 def check_input_file(file_path, extension):
+    """
+    Checks if the file exists and the extension is correct.
+    :param file_path: the path received from input commands to the input file.
+    :param extension: the expected extension of the file.
+    """
     if (os.path.isfile(file_path)) and (os.path.splitext(file_path)[1] == extension):
         print('Found {}'.format(file_path))
     else:
@@ -87,6 +92,7 @@ def main():
 
     # Here we check the input and the output,
     # in other words, we check the correction of the commands
+    # TODO: сделать нормальную проверку, так как здесть она зависит от порядка ввода, а вообще-то не должна зависеть! 
     for elem in zip([args.input_taxon, args.input_xml, args.input_reads],
                     ['.txt', '.xml', '.fastq']):
         check_input_file(elem[0], elem[1])
