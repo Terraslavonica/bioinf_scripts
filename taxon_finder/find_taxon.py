@@ -6,6 +6,8 @@ import csv
 import os
 import sys
 import re
+import logging
+import datetime
 import ete3
 from Bio.Blast import NCBIXML
 
@@ -13,7 +15,6 @@ from Bio.Blast import NCBIXML
 VERSION = 0.1
 
 
-# TODO: нужно добавить ввод парных ридов
 def setup_args():
     parser = argparse.ArgumentParser(description='Taxon finder. v={}'.format(VERSION))
 
@@ -21,7 +22,7 @@ def setup_args():
                         action='store',
                         help='File with interested taxons',
                         type=str,
-                        required=True)
+                        required=False)
 
     parser.add_argument('--input_xml',
                         action='store',
@@ -33,7 +34,7 @@ def setup_args():
                         action='store',
                         help='An .fastq file with reads',
                         type=str,
-                        required=True)
+                        required=False)
 
     parser.add_argument('--output',
                         action='store',
@@ -106,10 +107,8 @@ def main():
 
     # Here we check the input and the output,
     # in other words, we check the correction of the commands
-    # TODO: сделать нормальную проверку, так как здесть она зависит от порядка ввода, а вообще-то не должна зависеть!
-    for elem in zip([args.input_taxon, args.input_xml, args.input_reads],
-                    ['.txt', '.xml', '.fastq']):
-        check_input_file(elem[0], elem[1])
+
+    check_input_file(args.input_xml, '.xml')
     output = check_output_path(args.output)
 
     # We need to get a set with names
@@ -136,10 +135,13 @@ def main():
             writer.writerow([key, value])
 
     # This stage requires time, because script should download database from NCBI and parse it.
+    # ncbi_db.log allows to check the date of the last update.
     print('This stage requires additional time...')
     ncbi = ete3.NCBITaxa()
-    # TODO: решить вопрос с обновлением БД
-    # ncbi.update_taxonomy_database()
+    if not os.path.isfile(os.getcwd() + '/ncbi_db.log'):
+        logging.basicConfig(filename="ncbi_db.log", level=logging.INFO)
+        logging.info("Taxonomy DB was updated {}".format(datetime.datetime.now()))
+        ncbi.update_taxonomy_database()
 
     names_list = list(species_set.keys())
     name2taxid = ncbi.get_name_translator(names_list)
@@ -163,7 +165,7 @@ def main():
                 archaea_dict.update(ncbi.get_taxid_translator(taxid))
             else:
                 others_dict.update(ncbi.get_taxid_translator(taxid))
-        except Exception:
+        except ValueError:
             print('Missed taxid: {}'.format(taxid))
 
     dict_keeper = [insecta_dict,
@@ -182,7 +184,8 @@ def main():
             writer = csv.writer(csv_file)
             for key, value in elem.items():
                 writer.writerow([key, value])
-
+    # _______________________________________________
+    # TODO: отсюда нужно обрезать на отдельную функцию
     # Now we create one dict with unique keys, so that we can search easier
     overall_dict = dict()
     for d in dict_keeper:
@@ -203,7 +206,6 @@ def main():
     except StopIteration:
         pass
 
-    # TODO: учесть вариант нескольких значений taxon_id для файла
     # This will allow us to get a dict with taxon_id's from our input file
     taxon_dict = ncbi.get_name_translator(read_taxons(args.input_taxon))
 
@@ -214,7 +216,7 @@ def main():
             if overall_dict.get(taxon_dict[key][0]) is not None:
                 print('{0}:{1} is in your results'.format(key, overall_dict.get(taxon_dict[key][0])))
                 print('\t{0} is at the {1}'.format(key, species_query_set.get(taxon_dict[key][0])))
-        elif type(tree) == ete3.phylo.phylotree.PhyloNode:
+        elif type(tree) == ete3.PhyloNode:
             for child in tree.children:
                 # We need only the taxid number
                 potential_ids = re.findall('\\b\\d+\\b', child.get_ascii())

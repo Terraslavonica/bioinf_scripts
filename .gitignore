@@ -1,3 +1,4 @@
 venv
 .idea/
 taxdump.tar.gz
+ncbi_db.log
