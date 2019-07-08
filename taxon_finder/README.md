@@ -28,7 +28,7 @@ If you mention it, nothing happens.
 In the _/output_ you will find six .csv files:
  * archaea_dict.csv, mammalia_dict.csv, insecta_dict.csv, bacteria_dict.csv 
  and others_dict.csv are files with _taxid;name_ structure. 
- There are located the detected species respectively. 
+ There the detected species are located respectively.
  * frequency_dictionary.csv with _name;frequency_value_ structure for each detected species. 
  * taxons_found.csv with _input_taxon;results_species;query_ structure.
 
@@ -41,6 +41,6 @@ To install them run `pip install biopython` and `pip install ete3`.
 ## Notice please
 
 For the first run script will download _taxdump.tar.gz_ from NCBI via HTTP and create a database,
- so Internet connection and additional time are required. Do not delete _ncbi_db.log_, otherwise script will 
- download and parse database again. _ncbi_db.log_ contains only one row with the date of installation, 
+ so Internet connection and additional time are required. Do not delete _ncbi_db.log_, otherwise the script will 
+ download and parse the database again. _ncbi_db.log_ contains only one row with the date of installation, 
  it seems to be useful to update database sometimes. To update the database, delete the log-file. 
