@@ -40,6 +40,8 @@ To install them run `pip install biopython` and `pip install ete3`.
 
 ## Notice please
 
+It is better to show the whole way (`/home/...`) to the files and to the output. 
+
 For the first run script will download _taxdump.tar.gz_ from NCBI via HTTP and create a database,
  so Internet connection and additional time are required. Do not delete _ncbi_db.log_, otherwise the script will 
  download and parse the database again. _ncbi_db.log_ contains only one row with the date of installation, 
