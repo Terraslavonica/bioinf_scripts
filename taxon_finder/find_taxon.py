@@ -45,13 +45,15 @@ def setup_args():
     return parser.parse_args()
 
 
-# TODO: изменить функцию таким образом, чтобы создавала несуществующую директорию
 def check_output_path(res_path):
-    if (res_path is None) or (not os.path.exists(res_path)):
+    if res_path is None:
         finally_path = os.getcwd() + '/results'
         if not os.path.exists(finally_path):
             os.makedirs(finally_path)
-        print('You can find results in {} .'.format(os.getcwd() + '/results'))
+    if not os.path.exists(res_path):
+        os.makedirs(res_path)
+        finally_path = res_path
+        print('You can find results in {}'.format(res_path))
         return finally_path
     else:
         print('You can find results in {}'.format(res_path))
@@ -71,7 +73,6 @@ def check_input_file(file_path, extension):
         sys.exit('Input error. Exit.')
 
 
-# TODO: добавить нормальное считывание файла, нормально грепать только слова, без символов
 def read_taxons(taxon_path):
     """
     Reads names of taxons line by line from file.
@@ -97,6 +98,72 @@ def pull_species_name(hit_def_value):
         return found_res[0]
     else:
         return found_res[1]
+
+
+def search_taxon(in_taxon, in_xml, dict_keeper, output):
+    ncbi = ete3.NCBITaxa()
+    if not os.path.isfile(os.getcwd() + '/ncbi_db.log'):
+        logging.basicConfig(filename="ncbi_db.log", level=logging.INFO)
+        logging.info("Taxonomy DB was updated {}".format(datetime.datetime.now()))
+        ncbi.update_taxonomy_database()
+    # Now we create one dict with unique keys, so that we can search easier
+    overall_dict = dict()
+    for d in dict_keeper:
+        overall_dict.update(d)
+
+    handle = open(in_xml)
+    blast_records = NCBIXML.parse(handle)
+
+    species_query_set = dict()
+    try:
+        while True:
+            blast_record = next(blast_records)
+            for i in range(len(blast_record.alignments)):
+                new_name = str(pull_species_name(blast_record.alignments[i].hit_def))
+                for curr_taxid in ncbi.get_name_translator([new_name]).values():
+                    for j in range(len(curr_taxid)):
+                        species_query_set.update({curr_taxid[j]: blast_record.query})
+    except StopIteration:
+        pass
+
+    # This will allow us to get a dict with taxon_id's from our input file
+    taxon_dict = ncbi.get_name_translator(read_taxons(in_taxon))
+    print('Found taxons could be found in "taxons_found.csv"')
+    print('Search is started...')
+    output_file = open(output + '/taxons_found.csv', 'w')
+    exam_counter = 0
+
+    for idx, key in enumerate(taxon_dict):
+        tree = ncbi.get_descendant_taxa(key, collapse_subspecies=True, return_tree=True)
+        if type(tree) == list:
+            if overall_dict.get(taxon_dict[key][0]) is not None:
+                """
+                print('{0}:{1} is in your results'.format(key, overall_dict.get(taxon_dict[key][0])))
+                print('\t{0} is at the {1}'.format(key, species_query_set.get(taxon_dict[key][0])))
+                """
+                output_file.write('{0}; {1}; {2} \n'.format(key,
+                                                            overall_dict.get(taxon_dict[key][0]),
+                                                            species_query_set.get(taxon_dict[key][0])))
+                exam_counter += 1
+        elif type(tree) == ete3.PhyloNode:
+            for child in tree.children:
+                # We need only the taxid number
+                potential_ids = re.findall('\\b\\d+\\b', child.get_ascii())
+                for potential_id in potential_ids:
+                    if overall_dict.get(int(potential_id)) is not None:
+                        """
+                        print('{0}:{1} is in your results'.format(key, overall_dict[int(potential_id)]))
+                        print('\t{0} is at the {1}'.format(key, species_query_set[int(potential_id)]))
+                        """
+                        output_file.write('{0}; {1}; {2} \n'.format(key,
+                                                                    overall_dict[int(potential_id)],
+                                                                    species_query_set[int(potential_id)]))
+                        exam_counter += 1
+        else:
+            print('{0}: {1} is unknown'.format(key, taxon_dict[key]))
+    output_file.close()
+    print('Search is finished.')
+    print('Total found {}'.format(exam_counter))
 
 
 def main():
@@ -136,7 +203,7 @@ def main():
 
     # This stage requires time, because script should download database from NCBI and parse it.
     # ncbi_db.log allows to check the date of the last update.
-    print('This stage requires additional time...')
+    print('This stage requires additional time.')
     ncbi = ete3.NCBITaxa()
     if not os.path.isfile(os.getcwd() + '/ncbi_db.log'):
         logging.basicConfig(filename="ncbi_db.log", level=logging.INFO)
@@ -184,49 +251,13 @@ def main():
             writer = csv.writer(csv_file)
             for key, value in elem.items():
                 writer.writerow([key, value])
-    # _______________________________________________
-    # TODO: отсюда нужно обрезать на отдельную функцию
-    # Now we create one dict with unique keys, so that we can search easier
-    overall_dict = dict()
-    for d in dict_keeper:
-        overall_dict.update(d)
 
-    handle = open(args.input_xml)
-    blast_records = NCBIXML.parse(handle)
+    print('Parsing is done.')
 
-    species_query_set = dict()
-    try:
-        while True:
-            blast_record = next(blast_records)
-            for i in range(len(blast_record.alignments)):
-                new_name = str(pull_species_name(blast_record.alignments[i].hit_def))
-                for curr_taxid in ncbi.get_name_translator([new_name]).values():
-                    for j in range(len(curr_taxid)):
-                        species_query_set.update({curr_taxid[j]: blast_record.query})
-    except StopIteration:
-        pass
-
-    # This will allow us to get a dict with taxon_id's from our input file
-    taxon_dict = ncbi.get_name_translator(read_taxons(args.input_taxon))
-
-    print('Search is started...')
-    for idx, key in enumerate(taxon_dict):
-        tree = ncbi.get_descendant_taxa(key, collapse_subspecies=True, return_tree=True)
-        if type(tree) == list:
-            if overall_dict.get(taxon_dict[key][0]) is not None:
-                print('{0}:{1} is in your results'.format(key, overall_dict.get(taxon_dict[key][0])))
-                print('\t{0} is at the {1}'.format(key, species_query_set.get(taxon_dict[key][0])))
-        elif type(tree) == ete3.PhyloNode:
-            for child in tree.children:
-                # We need only the taxid number
-                potential_ids = re.findall('\\b\\d+\\b', child.get_ascii())
-                for potential_id in potential_ids:
-                    if overall_dict.get(int(potential_id)) is not None:
-                        print('{0}:{1} is in your results'.format(key, overall_dict[int(potential_id)]))
-                        print('\t{0} is at the {1}'.format(key, species_query_set[int(potential_id)]))
-        else:
-            print('{0}: {1} is unknown'.format(key, taxon_dict[key]))
-    print('Search is finished.')
+    # If the taxon list is given, we search child taxons
+    if args.input_taxon is not None:
+        check_input_file(args.input_taxon, '.txt')
+        search_taxon(args.input_taxon, args.input_xml, dict_keeper, output)
 
 
 if __name__ == '__main__':
