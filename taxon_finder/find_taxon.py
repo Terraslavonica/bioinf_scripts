@@ -50,7 +50,7 @@ def check_output_path(res_path):
         finally_path = os.getcwd() + '/results'
         if not os.path.exists(finally_path):
             os.makedirs(finally_path)
-    if not os.path.exists(res_path):
+    elif not os.path.exists(res_path):
         os.makedirs(res_path)
         finally_path = res_path
         print('You can find results in {}'.format(res_path))
