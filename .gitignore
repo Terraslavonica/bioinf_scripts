@@ -2,3 +2,4 @@ venv
 .idea/
 taxdump.tar.gz
 ncbi_db.log
+xml_executor/__pycache__/
