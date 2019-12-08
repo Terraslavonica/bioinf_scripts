@@ -16,6 +16,9 @@ extension. You can sort out species or find taxons. More information is given in
 * __xml_split.py__ allows to split your blast results into several parts. We had to do it, because our blast result
 was too big to use it in [Megan](https://github.com/danielhuson/megan-ce) with our computational resources. 
 
+* __from_BOLD_puller.py__ allows to find the longest subsequence for each species in .fas file. Also shows the 
+fraction of gaps in the sequence. 
+
 ## Getting started with:
 * __kraken_to_krona.py__
     
