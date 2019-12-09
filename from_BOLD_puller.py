@@ -25,8 +25,8 @@ def find_gaps_stat(row):
 def write_fasta(names_dict, filename):
     with open('results_{}'.format(filename), 'w+') as file:
         for name in names_dict:
-            file.write('>{0}|{1}\n'.format(name, names_dict[name][1]))
-            file.write(names_dict[name][0] + '\n')
+            file.write('{0}|{1}\n'.format(names_dict[name][0], names_dict[name][2]))
+            file.write(names_dict[name][1] + '\n')
 
 
 def main():
@@ -38,6 +38,7 @@ def main():
             if row[0] == '>':
                 # находим текущее название
                 row_name = re.split(r'\|', row)[1]
+                full_name = row[:-1]
                 # проверяем, есть ли уже последовательность для этого имени
                 old_seq = names_dict.get(row_name)
                 if old_seq:
@@ -45,11 +46,11 @@ def main():
                     curr_seq = next(file)[:-1]
                     if len(old_seq) < len(curr_seq):
                         # если новая посл-ть длиннее, то записываем
-                        names_dict.update({row_name: [curr_seq, find_gaps_stat(curr_seq)]})
+                        names_dict.update({row_name: [full_name, curr_seq, find_gaps_stat(curr_seq)]})
                 else:
                     # если нет, то записываем новую посл-ть
                     curr_seq = next(file)[:-1]
-                    names_dict.update({row_name: [curr_seq, find_gaps_stat(curr_seq)]})
+                    names_dict.update({row_name: [full_name, curr_seq, find_gaps_stat(curr_seq)]})
 
     write_fasta(names_dict, filename=filename)
 
